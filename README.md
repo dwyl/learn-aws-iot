@@ -175,4 +175,105 @@ Make a note of the ARN that is returned in the command line and then run the att
 
 You should now be able to interact with DynamoDB and Lambda!
 
-### 
+### Create a Rule to insert a Message into a DynamoDB table
+
+1. Create a table in the DynamoDB console:
+
+  ![create table](https://cloud.githubusercontent.com/assets/12450298/13015426/eca45280-d1b0-11e5-9e99-7ffe2e9127af.png)
+
+  Make sure it has a partition key (hash key) and sort key (range key) of type 'string'. We've called ours 'key' and 'timestamp':
+
+  ![keys](https://cloud.githubusercontent.com/assets/12450298/13015450/019e1518-d1b1-11e5-94c8-2e41eb92bcda.png)
+
+  Select your provisioned capacity and then click 'Create table':
+
+  ![provisioned capacity](https://cloud.githubusercontent.com/assets/12450298/13015473/2586f0b2-d1b1-11e5-9b82-eccb1a89f119.png)
+
+  ![table overview](https://cloud.githubusercontent.com/assets/12450298/13015481/408941d0-d1b1-11e5-8d5f-10f81fdcb8ef.png)
+
+2. Create a rule to trigger on a topic of your choice and insert an item into DynamoDB. Add the following to a file and call it ```dynamoDB-rule.json```. Copy the arn from the iot-actions-role we created earlier for the 'roleArn':
+
+  ```
+  {
+  "sql": "SELECT * FROM 'topic/test'",
+  "ruleDisabled": false,
+  "actions": [{
+      "dynamoDB": {
+        "tableName": "Iot",
+        "hashKeyField": "key",
+        "hashKeyValue": "${topic(2)}",
+        "rangeKeyField": "timestamp",
+        "rangeKeyValue": "${timestamp()}",
+        "roleArn": "arn:aws:iam::123456789012:role/iot-actions-role"
+      }
+    }]
+  }
+  ```
+
+3. Create a topic rule using the create-topic-rule command with the path to the DynamoDB rule from the previous step:
+
+  ```$ aws iot create-topic-rule --rule-name saveToDynamoDB --topic-rule-payload file://path-to-file/dynamoDB-rule.json```
+
+
+4. Open up MQTT.fx and then publish a message to the topic you defined in the rule. Ours is 'topic/test'. Write the message in the form of an object as opposed to a string otherwise it will get converted into binary:
+
+  ```
+  {
+    "msg" : "Hello, World"
+  }
+  ```
+
+5. Go back to your DynamoDB console and then check the table you created. You should now see the entry you just published:
+
+  ![published entry](https://cloud.githubusercontent.com/assets/12450298/13015516/7070c2c4-d1b1-11e5-910f-18526c0e56ee.png)
+
+You should now be able to post items to a DynamoDB table using AWS IoT!
+
+
+### Create a Rule to Invoke a Lambda Function
+
+1. Go to the Lambda console and create a new function. It can be very basic as we're just testing that it's being invoked:
+
+  Give it a name, choose your runtime and then write the function.
+  ![function](https://cloud.githubusercontent.com/assets/12450298/13015801/00e5527e-d1b3-11e5-8536-c9d60c8f8fce.png)
+
+  Leave the handler as ```index.handler``` and then give it a lambda_basic_execution role, then press 'Next' then 'Create function':
+  ![role and handler](https://cloud.githubusercontent.com/assets/12450298/13015836/2e2e35b6-d1b3-11e5-8991-b4a86f53317e.png)
+  **_(NOTE: when you select the role, just click 'Allow' on the page it takes you to)_**
+
+  Make a note of the ARN on the review page for your function, you'll need that for the Rule.
+
+2. Create a new file for your Lambda rule. We've called ours ```lambda-rule.json```. Enter the following code with your ARN:
+
+  ```
+  {
+      "sql": "SELECT * FROM 'topic/test'",
+      "ruleDisabled": false,
+      "actions": [{
+          "lambda": {
+              "functionArn": "arn:aws:lambda:us-east-1:123456789012:function:myHelloWorld"
+          }
+      }]
+  }
+  ```
+
+3. Create a topic rule by entering the create-topic-rule command from IoT. Name it what you like and then link it to the rule we just created:
+
+  ```$ aws iot create-topic-rule --rule-name invokeLambda --topic-rule-payload file://path-to-file/lambda-rule.json```
+
+4. Provide a resource based policy so that AWS IoT can invoke the Lambda function. Here is the command:
+
+  ```$ aws lambda add-permission --function-name ("function_name") --region ("region") --principal iot.amazonaws.com --source-arn arn:aws:iot:us-east-1:(account_id):rule/(rule_name) --source-account ("account_id") --statement-id ("unique_id") --action "lambda:InvokeFunction"```
+
+  The **_account id_** can be found in your AWS ['Security Credentials'](https://console.aws.amazon.com/iam/home?#security_credential) page. Click on '+ Account Identifiers' to view it. Note that you have to take the dashes out so you're left with the 12 digits.  
+  The **_statement id_** is also known as 'Sid' which we defined earlier when we created an IAM role for IoT.
+
+  ![security credentials](https://cloud.githubusercontent.com/assets/12450298/13016299/aa144e66-d1b5-11e5-97e8-9cd00a254745.png)
+
+5. Go back to MQTT.fx and publish a message to your topic that you defined in the Lambda rule.
+
+6. Go to the Lambda console and then click on your IoT function. Click on the monitoring tab and you should see that the function has been invoked through IoT.
+
+  ![monitoring](https://cloud.githubusercontent.com/assets/12450298/13016336/02b1096a-d1b6-11e5-9879-d69f28bc7627.png)
+
+That's it! Now you should be able to invoke a Lambda function through AWS IoT!
