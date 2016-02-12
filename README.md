@@ -149,4 +149,30 @@ Then to create the IAM role, run the create-role command giving it the Assume Ro
 
 ```$ aws iam create-role --role-name iot-actions-role --assume-role-policy-document file://path-to-file/trust-policy.json```
 
-Make sure you save the ARN from the output of this command as you'll need it to create 
+Make sure you save the ARN from the output of this command as you'll need it to create a _rule_ later on. _(rules enable you to access other AWS servives through IoT)
+
+### Grant Permissions to the Role
+Later on we're going to go through a couple of examples for using the AWS IoT service, one to post data to a DynamoDB table and then one to invoke a Lambda function. To do this we have to create a policy and then attach it to the role we created in the previous section. Copy the following code into a new file and name it whatever you like. We've called it ```iam-policy.json```:
+
+```
+{
+    "Version": "2012-10-17",    
+    "Statement": [{
+        "Effect": "Allow",
+        "Action": [ "dynamodb:*", "lambda:InvokeFunction"],
+        "Resource": ["*"]
+    }]
+}
+```
+
+Run the create-policy and link to the file path you just created:
+
+```$ aws iam create-policy --policy-name iot-actions-policy --policy-document file://IAM-policy-document-file-path```
+
+Make a note of the ARN that is returned in the command line and then run the attach-policy-role with this command:
+
+```$ aws iam attach-role-policy --role-name iot-actions-role --policy-arn "policy-ARN"```
+
+You should now be able to interact with DynamoDB and Lambda!
+
+### 
