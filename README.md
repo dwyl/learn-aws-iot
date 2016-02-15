@@ -277,3 +277,156 @@ You should now be able to post items to a DynamoDB table using AWS IoT!
   ![monitoring](https://cloud.githubusercontent.com/assets/12450298/13016336/02b1096a-d1b6-11e5-9879-d69f28bc7627.png)
 
 That's it! Now you should be able to invoke a Lambda function through AWS IoT!
+
+
+### Simulate a Device with Device Registry and Device Shadow
+
+1. The first thing you'll need to do is register the device by using the 'create-thing' command. We're going to simulate a light bulb, here is our example command:
+
+  ```$ aws iot create-thing --thing-name lightBulb```
+
+  It should return the name of your device with the ARN for that device:
+
+  ```
+  {
+    "thingArn": "arn:aws:iot:eu-west-1:123456789:thing/lightBulb",
+    "thingName": "lightBulb"
+  }
+  ```
+
+2. Confirm that your device has been created with the following command:
+
+  ```$ aws iot list-things```
+
+  You should then see a list of your registered devices returned in the form of an object:
+
+  ```
+  {
+    "things": [
+        {
+            "attributes": {},
+            "thingName": "lightBulb"
+        }
+    ]
+  }
+  ```
+
+3. To simulate our new device we're going to use MQTT.fx _(it can also be done with a RESTful API)_. MQTT will synchronize a thing with its shadow in AWS IoT. To report its state over MQTT the thing publishes on ```$aws/things/(thingName)/shadow/update```. If there's an error such as version conflict when merging the reported state AWS IoT will push an error message on topic ```$aws/things/(thingName)/shadow/rejected```. To receive updates from the shadow the thing should subscribe to topic ```$aws/things/(thingName)/shadow/update/accepted```.
+
+  Subscribe to both the ```$aws/things/myLightBulb/shadow/update/rejected``` and ```$aws/things/myLightBulb/shadow/update/accepted``` topics:
+  ![subscribe topics](https://cloud.githubusercontent.com/assets/12450298/13048106/8e99f1c2-d3db-11e5-9cea-9d1265638487.png)
+
+  Publish the following message to ```$aws/things/(thingName)/shadow/update```:
+
+  ```
+  {
+    "state": {
+        "reported": {
+            "color": "RED"
+        }
+    }
+  }
+  ```
+
+  By doing so, this simulates reporting the state of the _thing_ to AWS IoT.
+
+4. Next we're going to want to check if the state of our _thing_ has been updated. To do this we can enter the following command into our terminal:
+
+  ```aws iot-data get-thing-shadow --thing-name "thingName" output.txt && cat output.txt```
+
+
+  This should return an object like this one:
+
+  ```
+  {
+    "state": {
+      "reported": {
+        "color":"RED"
+        }
+      },
+    "metadata": {
+      "reported": {
+        "color": {
+          "timestamp":123456789
+          }
+        }
+      },
+    "version": 1,
+    "timestamp":123456789
+  }
+  ```
+5. To request an update _(set state on the thing)_ we can use the 'update-thing-shadow' command. This is as follows:
+
+  ```aws iot-data update-thing-shadow --thing-name "thingName" --payload "{ \"state\": {\"desired\": { \"color\": \"GREEN\" } } }"  output.txt && cat output.txt```
+
+  It returns the following in your terminal:
+
+  ```
+  {
+    "state": {
+      "desired": {
+        "color": "GREEN"
+        }
+      },
+    "metadata": {
+      "desired": {
+        "color": {
+          "timestamp":123456789
+        }
+      }
+    },
+  "version": 2,
+  "timestamp":123456789
+  }
+  ```
+
+6. Now if you run the first command ```aws iot-data get-thing-shadow --thing-name "thingName" output.txt && cat output.txt``` you should then get a return of:
+
+  ```
+  {
+    "state": {  
+      "desired": {
+        "color": "GREEN"
+        },
+        "reported": {
+          "color": "RED"
+        },
+        "delta": {
+          "color":"GREEN"
+          }
+        },
+        "metadata": {
+          "desired": {
+            "color": {
+              "timestamp":123456789
+              }
+            },
+            "reported": {
+              "color": {
+                "timestamp":123456789
+                }
+              }
+            },
+            "version":2,
+            "timestamp":123456789
+  }
+  ```
+  You can see the desired colour is green, the reported colour is red and the delta colour is green. This is basically saying that when the device is next connected, change the colour of the light bulb from red to green. Delta is showing the value by which the colour is changing. _(a copy of this is saved to your file tree structure in the specified ```output.txt``` file)_
+
+7. Let's say we want to delete our _thing_ using MQTT.fx, all we have to to is publish a state of null to the ```$aws/things/(thingName)/shadow/update``` topic. It will look like this:
+
+  ```
+  {
+    "state": null
+  }
+  ```
+
+  To delete it using the CLI simply type the following command into your terminal:
+
+  ```$ aws iot delete-thing --thing-name thingName```
+
+  **_Note: You must detach any attached principals using the 'detach-thing-principal' CLI command before deleting a thing from the Thing Registry._**
+
+  To detach a principal, type this command into your command line:
+
+  ```$ aws iot detach-thing-principal --thing-name (thingName) --principal (principalYouWantToRemove)```

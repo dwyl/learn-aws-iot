@@ -1,0 +1,1 @@
+{"state":{"desired":{"color":"GREEN"},"reported":{"color":"RED"},"delta":{"color":"GREEN"}},"metadata":{"desired":{"color":{"timestamp":1455538322}},"reported":{"color":{"timestamp":1455537894}}},"version":2,"timestamp":1455538504}
