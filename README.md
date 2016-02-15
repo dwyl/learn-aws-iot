@@ -279,7 +279,7 @@ You should now be able to post items to a DynamoDB table using AWS IoT!
 That's it! Now you should be able to invoke a Lambda function through AWS IoT!
 
 
-### Simulate a Device with Device Registry and Device Shadow
+### Simulate a Device with Device Registry and Device Shadow 💡
 
 1. The first thing you'll need to do is register the device by using the 'create-thing' command. We're going to simulate a light bulb, here is our example command:
 
