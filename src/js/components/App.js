@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 const mqtt = require('mqtt');
-const ajaxGetRequest = require('./request.js');
+const ajaxGetRequest = require('../utils/request.js');
 
 class App extends Component {
 
@@ -16,7 +16,7 @@ class App extends Component {
     });
 
     client.subscribe("my/topic");
-    
+
     client.on("message", function(topic, payload) {
       alert([topic, payload].join(": "));
       client.end();

@@ -281,7 +281,7 @@ That's it! Now you should be able to invoke a Lambda function through AWS IoT!
 
 ### Simulate a Device with Device Registry and Device Shadow
 
-1. The first thing you'll need to do is register the device by using the 'create-thing' command. We're going to simulate a light bulb, here is our example command:
+1. The first thing you'll need to do is register the device by using the 'create-thing' command _(NOTE: you'll also need to attach new certificates to your thing, follow the steps in the previous example to do so and reconfigure your MQTT settings accordingly with the new paths to the new certificates in the SSL/TLS section)_. We're going to simulate a light bulb, here is our example command:
 
   ```$ aws iot create-thing --thing-name lightBulb```
 

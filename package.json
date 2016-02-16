@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "crypto-js": "^3.1.6",
+    "env2": "^2.0.6",
     "moment": "^2.11.2",
     "mqtt": "^1.7.0",
     "react": "^0.14.7",

@@ -8,7 +8,9 @@ module.exports = {
     "./src/"
   ],
   output    : {
-    publicPath : "/dev/"
+    path: __dirname + '/public',
+    filename: 'bundle.js',
+    publicPath: '/public'
   },
   module    : {
     loaders : [
@@ -34,7 +36,12 @@ module.exports = {
     tls: "empty"
   },
   devServer : { hot: true },
-  plugins   : [ new webpack.HotModuleReplacementPlugin() ],
+  plugins   : [
+    new webpack.HotModuleReplacementPlugin(),
+    new webpack.DefinePlugin({
+    'process.env.NODE_ENV': '"development"'
+    })
+  ],
   inline    : true,
   progress  : true,
   colors    : true

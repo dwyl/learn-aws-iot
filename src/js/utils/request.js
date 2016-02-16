@@ -1,3 +1,4 @@
+var env2 = require('env2')('../../../config.env');
 /**
  * utilities to do sigv4
  * @class SigV4Utils
@@ -25,12 +26,12 @@ SigV4Utils.getSignatureKey = function(key, dateStamp, regionName, serviceName) {
 };
 
 var options = {
-  regionName:
-  secretKey: 
-  accessKey:
-  endpoint:
+  regionName: "eu-west-1",
+  secretKey: process.env.SECRET_KEY,
+  accessKey: process.env.ACCESS_KEY,
+  endpoint: process.env.ENDPOINT
 };
-
+console.log(process.env.USER);
 var time = moment.utc();
 var dateStamp = time.format('YYYYMMDD');
 var amzdate = dateStamp + 'T' + time.format('HHmmss') + 'Z';

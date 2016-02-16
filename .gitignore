@@ -33,8 +33,11 @@ node_modules
 .node_repl_history
 dev/
 
-PEM
+# PEM
 cert.pem
 privateKey.pem
 publicKey.pem
 rootca.pem
+
+# env
+config.env
