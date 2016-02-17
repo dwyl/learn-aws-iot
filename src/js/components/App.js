@@ -1,33 +1,36 @@
 import React, { Component } from 'react';
-const mqtt = require('mqtt');
-const ajaxGetRequest = require('./request.js');
+import mqtt from 'mqtt';
+import AWS  from 'aws-sdk';
+import { formatRequestUrl, initClient } from '../utils/request.js';
 
 class App extends Component {
 
   componentDidMount() {
-    ajaxGetRequest(function(data){
-      console.log("DATA", data);
+    AWS.config.region = 'eu-west-1';
+
+    var credentials = new AWS.CognitoIdentityCredentials({
+        IdentityPoolId: 'eu-west-1:21512274-1564-449c-b56e-d29fa128917a',
     });
 
-    const client = mqtt.connect('', {
-      useSSL: true,
-      timeout: 3,
-      mqttVersion: 4,
-    });
+    module.exports = function getUrl() {
+        credentials.get(function(err) {
+          if(err) {
+              console.log(err);
+              return;
+          }
+          var options = {
+            regionName: 'eu-west-1',
+            secretKey:  credentials.secretAccessKey,
+            accessKey:  credentials.accessKeyId,
+            endpoint:   ,
+            sessionToken: credentials.sessionToken
+          };
 
-    client.subscribe("my/topic");
-    
-    client.on("message", function(topic, payload) {
-      alert([topic, payload].join(": "));
-      client.end();
-    });
-    client.on("error", function(error) {
-      console.log("error", error);
-      client.end();
-    });
-    client.on("connect", function(connect){
-      console.log("connect", connect);
-    })
+          var requestUrl = formatRequestUrl(options);
+
+          initClient(requestUrl);
+      });
+    }
   }
 
   render () {

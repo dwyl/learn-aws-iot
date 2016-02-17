@@ -11,6 +11,9 @@ module.exports = {
     publicPath : "/dev/"
   },
   module    : {
+    noParse: [
+      /aws/
+    ],
     loaders : [
       {
         test    : /\.js$/,
