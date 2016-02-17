@@ -496,3 +496,235 @@ That's it! Now you should be able to invoke a Lambda function through AWS IoT!
   To detach a principal, type this command into your command line:
 
   ```$ aws iot detach-thing-principal --thing-name (thingName) --principal (principalYouWantToRemove)```
+
+
+  ### Use IoT to Create a Websocket Connection in the Browser
+  This is a complete tutorial that will help you to build a websocket application with AWS IoT from _scratch_.
+
+  1. The first thing we're going to have to do is to create a _thing_ in AWS IoT. To do this we can run the 'create-thing' command in our terminal:
+
+    ```$ aws iot create-thing --thing-name "thingName"```
+
+    This will return an object with an ARN and your thing name.
+
+  2. Next we'll need to create a couple of certificates for our device. Run this command in your command line:
+
+    ```aws iot create-keys-and-certificate --set-as-active --certificate-pem-outfile cert.pem --public-key-outfile publicKey.pem --private-key-outfile privateKey.pem```
+
+    This will create 3 certificate files in your project folder. Make a note of the certificate ARN that gets returned to your command line.
+
+  3. Create and attach an AWS IoT policy to your certificate. Create a file called ```policy.json``` and save the following code in it:
+
+    ```
+    {
+      "Version": "2012-10-17",
+      "Statement": [{
+          "Effect": "Allow",
+          "Action":["iot:*"],
+          "Resource": ["*"]
+      }]
+    }
+    ```
+    This is basically giving complete access to publish and subscribe on any resource. Next we have to create a policy document that links to the file we just created. To do so we run the following command:
+
+    ```$ aws iot create-policy --policy-name "PubSubToAnyTopic" --policy-document file://path-to-your-policy-document```
+
+    Now that we've created the policy, we have to attach it to our certificate. Use the following command with our certificate ARN to do so:
+
+    ```$ aws iot attach-principal-policy --principal "(certificate-ARN-we-noted-down-earlier)" --policy-name "PubSubToAnyTopic"```
+
+    Note: It shouldn't return anything to the command line.
+
+  4. Now that we've got a certificate that we can use, let's attach it to our device. Use this command to attach it:
+
+    ```$ aws iot attach-thing-principal --thing-name "thing-name" --principal "(certificate-ARN-we-noted-down-earlier)"```
+
+    Again this shouldn't return anything to the command line.
+
+  5. Now let's go to the IAM console because we'll need to create a _user_ with the correct permissions. Click on the users tab and then click on the 'Create New Users' button:
+
+    ![new users](https://cloud.githubusercontent.com/assets/12450298/13117245/f7fdb704-d596-11e5-8e6c-9b7309623038.png)
+
+    Give your new user a name and then click the box that says 'Generateand access key for each user'. Then click 'Create'.
+
+    ![create user](https://cloud.githubusercontent.com/assets/12450298/13117299/39d000b0-d597-11e5-83ac-cb9639315343.png)
+
+    Make a note of the Access Key ID and Secret Access Key because we'll need them to configure our websocket.
+
+  6. While in the IAM console click on the 'Groups' tab on the left. We're going to create a new group and attach a policy to it that will give any user within that group access to AWS IoT. We'll then add our user to that group.   
+  **(NOTE: MAKE SURE YOU ONLY GIVE THIS GROUP THE PERMISSION SPECIFIED AS THE SECRET KEYS WILL BE PUBLIC)**
+
+    ![create group](https://cloud.githubusercontent.com/assets/12450298/13117471/fe24f254-d597-11e5-8839-8ac7fd387fbe.png)
+
+    Give your group a name and then click 'Next Step'
+    ![name group](https://cloud.githubusercontent.com/assets/12450298/13117555/5d74fa6a-d598-11e5-8b5a-9c5aa39f1cc1.png)
+
+    Now select the 'AWSIoTDataAccess' policy and attach it
+    ![policy](https://cloud.githubusercontent.com/assets/12450298/13118675/3e7b3b92-d59d-11e5-9238-d96d5d71f75c.png)
+
+    Then click on the 'Users' tab and then select 'Add users'
+    ![add users](https://cloud.githubusercontent.com/assets/12450298/13117634/b41925f8-d598-11e5-9a4c-57a94ba45ee6.png)
+
+    Then click 'Add users'. You should then be able to see your user in the group
+    ![user in group](https://cloud.githubusercontent.com/assets/12450298/13117693/ef600dfc-d598-11e5-8d19-0f2345915f26.png)
+
+  7. We're going to have to get our AWS endpoint in order to configure the websocket. To do so type this command and then make note of the endpoint:
+
+    ```$ aws iot describe-endpoint```
+
+    **(NOTE: The endpoint MUST be in lowercase when you include it in your html file!!)**
+
+  8. Now let's create our ```index.html``` file that we're going to be serving up. Enter the following code into ```index.html``` (Make sure you change the Access Keys to the ones associated with the user we created earlier when you're creating the endpoint):
+
+    ```html
+    <!DOCTYPE html>
+    <html lang="EN">
+    <head>
+      <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+      <meta content="utf-8" http-equiv="encoding">
+    </head>
+    <body>
+      <ul id="chat">
+        <li v-for="m in messages">{{ m }}</li>
+      </ul>
+      <input type="text" name="say" id="say" placeholder="Input a message here...">
+      <button id="send">Send</button>
+
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/1.0.16/vue.min.js" type="text/javascript"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.11.2/moment.min.js" type="text/javascript"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/core-min.js" type="text/javascript"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/hmac-min.js" type="text/javascript"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/sha256-min.js" type="text/javascript"></script>
+      <script src="http://git.eclipse.org/c/paho/org.eclipse.paho.mqtt.javascript.git/plain/src/mqttws31.js" type="text/javascript"></script>
+      <script type="text/javascript">
+
+        var data = {
+          messages: []
+        };
+
+        new Vue({
+          el: '#chat',
+          data: data
+        });
+
+        document.getElementById('send').addEventListener('click', function (e) {
+          var say = document.getElementById('say')
+          send(say.value);
+          say.value = '';
+        });
+
+        function SigV4Utils(){}
+
+        SigV4Utils.sign = function(key, msg) {
+          var hash = CryptoJS.HmacSHA256(msg, key);
+          return hash.toString(CryptoJS.enc.Hex);
+        };
+
+        SigV4Utils.sha256 = function(msg) {
+          var hash = CryptoJS.SHA256(msg);
+          return hash.toString(CryptoJS.enc.Hex);
+        };
+
+        SigV4Utils.getSignatureKey = function(key, dateStamp, regionName, serviceName) {
+          var kDate = CryptoJS.HmacSHA256(dateStamp, 'AWS4' + key);
+          var kRegion = CryptoJS.HmacSHA256(regionName, kDate);
+          var kService = CryptoJS.HmacSHA256(serviceName, kRegion);
+          var kSigning = CryptoJS.HmacSHA256('aws4_request', kService);
+          return kSigning;
+        };
+
+        function createEndpoint(regionName, awsIotEndpoint, accessKey, secretKey) {
+          var time = moment.utc();
+          var dateStamp = time.format('YYYYMMDD');
+          var amzdate = dateStamp + 'T' + time.format('HHmmss') + 'Z';
+          var service = 'iotdevicegateway';
+          var region = regionName;
+          var secretKey = secretKey;
+          var accessKey = accessKey;
+          var algorithm = 'AWS4-HMAC-SHA256';
+          var method = 'GET';
+          var canonicalUri = '/mqtt';
+          var host = awsIotEndpoint;
+
+          var credentialScope = dateStamp + '/' + region + '/' + service + '/' + 'aws4_request';
+          var canonicalQuerystring = 'X-Amz-Algorithm=AWS4-HMAC-SHA256';
+          canonicalQuerystring += '&X-Amz-Credential=' + encodeURIComponent(accessKey + '/' + credentialScope);
+          canonicalQuerystring += '&X-Amz-Date=' + amzdate;
+          canonicalQuerystring += '&X-Amz-SignedHeaders=host';
+
+          var canonicalHeaders = 'host:' + host + '\n';
+          var payloadHash = SigV4Utils.sha256('');
+          var canonicalRequest = method + '\n' + canonicalUri + '\n' + canonicalQuerystring + '\n' + canonicalHeaders + '\nhost\n' + payloadHash;
+
+          var stringToSign = algorithm + '\n' +  amzdate + '\n' +  credentialScope + '\n' +  SigV4Utils.sha256(canonicalRequest);
+          var signingKey = SigV4Utils.getSignatureKey(secretKey, dateStamp, region, service);
+          var signature = SigV4Utils.sign(signingKey, stringToSign);
+
+          canonicalQuerystring += '&X-Amz-Signature=' + signature;
+          return 'wss://' + host + canonicalUri + '?' + canonicalQuerystring;
+        }
+
+        var endpoint = createEndpoint(
+            'eu-west-1',                                           // Your Region
+            'lowercasea315z3lphjmasx.iot.eu-west-1.amazonaws.com', // Require 'lowercamelcase'!!
+            'HKAEFLJBLKJHFAKJ',                                    // your Access Key ID
+            '1234556664smblvmnbxvmbEXAMPLEQI5cTtu/aCbCi');         // Secret Access Key
+        var clientId = Math.random().toString(36).substring(7);
+        var client = new Paho.MQTT.Client(endpoint, clientId);
+        var connectOptions = {
+          useSSL: true,
+          timeout: 3,
+          mqttVersion: 4,
+          onSuccess: subscribe
+        };
+        client.connect(connectOptions);
+        client.onMessageArrived = onMessage;
+        client.onConnectionLost = function(e) { console.log(e) };
+
+        function subscribe() {
+          client.subscribe("Test/chat");
+          console.log("subscribed");
+        }
+
+        function send(content) {
+          var message = new Paho.MQTT.Message(content);
+          message.destinationName = "Test/chat";
+          client.send(message);
+          console.log("sent");
+        }
+
+        function onMessage(message) {
+          data.messages.push(message.payloadString);
+          console.log("message received: " + message.payloadString);
+        }
+      </script>
+    </body>
+    </html>
+    ```
+
+  9. Let's take our code for a spin! Type the following command into the terminal to start up a simple server:
+
+    ```$ python -m SimpleHTTPServer```
+
+    Then open two windows side by side at http://localhost:8000/
+
+    Type something in the left and then press send:
+
+    ![send](https://cloud.githubusercontent.com/assets/12450298/13118451/18333d00-d59c-11e5-9fb0-f75507c6094c.png)
+
+    The message should appear instantaneously in both windows:
+
+    ![sent](https://cloud.githubusercontent.com/assets/12450298/13118502/59639694-d59c-11e5-8b20-2bfaf1a17f7f.png)
+
+    Do the same from the other window:
+
+    ![reply](https://cloud.githubusercontent.com/assets/12450298/13118527/76a46a58-d59c-11e5-932b-7e2fa69ebef3.png)
+
+    And you should see the same thing happen:
+
+    ![replied](https://cloud.githubusercontent.com/assets/12450298/13118538/89e06e78-d59c-11e5-9e8a-f83e4b4f0ccf.png)
+
+
+  That's it! You should now be able to open up a websocket connection in the browser using AWS IoT!
+
+  Credit to Yusuke Arai for the **[tutorial](http://dev.classmethod.jp/cloud/aws/aws-iot-mqtt-over-websocket/)**
