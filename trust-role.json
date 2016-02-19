@@ -1,0 +1,11 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Sid": "123456",
+    "Effect": "Allow",
+    "Principal": {
+      "Federated": "cognito-identity.amazonaws.com"
+    },
+    "Action": "sts:AssumeRoleWithWebIdentity"
+  }]
+}
