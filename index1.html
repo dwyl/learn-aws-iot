@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="EN">
+<head>
+  <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+  <meta content="utf-8" http-equiv="encoding">
+</head>
+<body>
+  <ul id="chat">
+    <li v-for="m in messages">{{ m }}</li>
+  </ul>
+  <input type="text" name="say" id="say" placeholder="Input a message here...">
+  <button id="send">Send</button>
+  <script src="https://sdk.amazonaws.com/js/aws-sdk-2.2.37.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/1.0.16/vue.min.js" type="text/javascript"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.11.2/moment.min.js" type="text/javascript"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/core-min.js" type="text/javascript"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/hmac-min.js" type="text/javascript"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/sha256-min.js" type="text/javascript"></script>
+  <script src="http://git.eclipse.org/c/paho/org.eclipse.paho.mqtt.javascript.git/plain/src/mqttws31.js" type="text/javascript"></script>
+  <script type="text/javascript">
+    var data = {
+      messages: []
+    };
+
+    new Vue({
+      el: '#chat',
+      data: data
+    });
+
+
+
+    AWS.config.region = 'eu-west-1'; // Region
+    var credentials = new AWS.CognitoIdentityCredentials({
+      IdentityPoolId: 'eu-west-1:3758f1cf-943a-48bd-a2a1-bcdfbe6f19b3',
+      RoleArn: 'arn:aws:iam::655240720487:role/cognito',
+      AccountId: '655240720487'
+    });
+
+    function SigV4Utils(){}
+
+    SigV4Utils.sign = function(key, msg) {
+      var hash = CryptoJS.HmacSHA256(msg, key);
+      return hash.toString(CryptoJS.enc.Hex);
+    };
+
+    SigV4Utils.sha256 = function(msg) {
+      var hash = CryptoJS.SHA256(msg);
+      return hash.toString(CryptoJS.enc.Hex);
+    };
+
+    SigV4Utils.getSignatureKey = function(key, dateStamp, regionName, serviceName) {
+      var kDate = CryptoJS.HmacSHA256(dateStamp, 'AWS4' + key);
+      var kRegion = CryptoJS.HmacSHA256(regionName, kDate);
+      var kService = CryptoJS.HmacSHA256(serviceName, kRegion);
+      var kSigning = CryptoJS.HmacSHA256('aws4_request', kService);
+      return kSigning;
+    };
+
+    SigV4Utils.getSignedUrl = function(protocol, host, uri, service, region, accessKey, secretKey, sessionToken) {
+    var time = moment().utc();
+    var dateStamp = time.format('YYYYMMDD');
+    var amzdate = dateStamp + 'T' + time.format('HHmmss') + 'Z';
+    var algorithm = 'AWS4-HMAC-SHA256';
+    var method = 'GET';
+
+    var credentialScope = dateStamp + '/' + region + '/' + service + '/' + 'aws4_request';
+    var canonicalQuerystring = 'X-Amz-Algorithm=AWS4-HMAC-SHA256';
+    canonicalQuerystring += '&X-Amz-Credential=' + encodeURIComponent(accessKey + '/' + credentialScope);
+    canonicalQuerystring += '&X-Amz-Date=' + amzdate;
+    canonicalQuerystring += '&X-Amz-SignedHeaders=host';
+
+    var canonicalHeaders = 'host:' + host + '\n';
+    var payloadHash = SigV4Utils.sha256('');
+    var canonicalRequest = method + '\n' + uri + '\n' + canonicalQuerystring + '\n' + canonicalHeaders + '\nhost\n' + payloadHash;
+
+
+    var stringToSign = algorithm + '\n' + amzdate + '\n' + credentialScope + '\n' + SigV4Utils.sha256(canonicalRequest);
+    var signingKey = SigV4Utils.getSignatureKey(secretKey, dateStamp, region, service);
+    var signature = SigV4Utils.sign(signingKey, stringToSign);
+
+    canonicalQuerystring += '&X-Amz-Signature=' + signature;
+    if (sessionToken) {
+        canonicalQuerystring += '&X-Amz-Security-Token=' + encodeURIComponent(sessionToken);
+    }
+
+    var requestUrl = protocol + '://' + host + uri + '?' + canonicalQuerystring;
+    return requestUrl;
+    }
+
+    // Getting AWS creds from Cognito is async, so we need to drive the rest of the mqtt client initialization in a callback
+    credentials.get(function(err) {
+        if(err) {
+            console.log(err);
+            return;
+        }
+        console.log(credentials);
+        var requestUrl = SigV4Utils.getSignedUrl('wss', 'data.iot.eu-west-1.amazonaws.com', '/mqtt',
+            'iotdevicegateway', 'eu-west-1',
+            credentials.accessKeyId, credentials.secretAccessKey, credentials.sessionToken);
+            console.log(requestUrl);
+        initClient(requestUrl);
+    });
+
+
+
+
+    // Connect the client, subscribe to the drawing topic, and publish a "hey I connected" message
+    function initClient(requestUrl) {
+        var clientId = String(Math.random()).replace('.', '');
+        var client = new Paho.MQTT.Client(requestUrl, clientId);
+
+        document.getElementById('send').addEventListener('click', function (e) {
+          var say = document.getElementById('say');
+          send(say.value);
+          say.value = '';
+        });
+
+        function send(content) {
+          var message = new Paho.MQTT.Message(content);
+          message.destinationName = "test/topic";
+          client.send(message);
+          console.log("sent");
+        }
+
+        var connectOptions = {
+            onSuccess: function () {
+                console.log('connected');
+                console.log(client.isConnected());
+                console.log(client.connected);
+
+                // subscribe to the drawing
+                client.subscribe("test/topic");
+                setTimeout(function(){
+                  // try send a messsage
+                  var content = 'Hai!';
+                  var message = new Paho.MQTT.Message(content);
+                  message.destinationName = "test/topic";
+                  client.send(message);
+                },1500)
+            },
+            useSSL: true,
+            timeout: 3,
+            mqttVersion: 4,
+            onFailure: function () {
+                console.error('connect failed');
+            }
+        };
+        client.connect(connectOptions);
+
+
+        client.onMessageArrived = function (message) {
+
+            try {
+                console.log("msg arrived: " +  message.payloadString);
+            } catch (e) {
+                console.log("error! " + e);
+            }
+
+        };
+
+    }
+  </script>
+</body>
+</html>
