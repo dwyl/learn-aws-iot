@@ -1,20 +1,33 @@
-# learn-aws-iot
+# Learn AWS IoT
 
 Learn how to use Amazon Web Services Internet of Things (IoT) service to build connected applications.
 
+## What _is_ AWS IoT?
+AWS IoT is an Amazon service that provides two-way communication between devices that are connected to the internet and the AWS Cloud. This means that you can create applications that your users will be able to control from their phones or tablets. _(Very cool stuff!)_
 
-## AWS IOT MQTT over Web Sockets
+AWS IoT consists of a few components. They are:
 
-We want to enable browser based apps to send and receive data from iOT connected devices using WebSockets.
+* **Message broker** - a mechanism for things to publish and receive messages from each other. The MQTT protocol can be used to publish and subscribe and the HTTP REST interface can be used to publish.
+* **Rules** engine - allows the integration between IoT and other AWS services.
+* **Thing Registry** - a.k.a. 'Device Registry'. This organises the resources associated with each _thing_.
+* **Thing Shadow service** - provides persistent representations of your things in the AWS Cloud. It can hold state information about your _thing_ which can be synchronised when it next connects. Your _things_ can also publish their current state to a thing shadow for other applications or devices to use.
+* **Thing shadow** - a.k.a. 'Device shadow'. It's a JSON document used to store and retrieve current state information for a _thing_.
+* **Device gateway** - enables devices to communicate with AwS IoT.
+* **Security and identity** service - Your _things_ must keep their credentials safe in order to send data securely to the message broker. The message broker and rules engine use AWS Security features to send data to devices or other AWS services.
 
-AWS iOT acts as a message broker - essentially a pub/sub broker service that enables sending and receiving messages to and from AWS IoT.
-MQTT is lightweight connectivity protocol for pub/sub message transport. It can be used over the Web Socket Protocol to send messages between a client and server. AWS introduced support for MQTT over WebSockets for AWS iOT in [January 2016](https://aws.amazon.com/about-aws/whats-new/2016/01/aws-iot-now-supports-websockets-custom-keepalive-intervals-and-enhanced-console/)!
+
+## AWS IoT MQTT over Web Sockets
+
+We want to enable browser based apps to send and receive data from IoT connected devices using WebSockets.
+
+AWS IoT acts as a message broker - essentially a pub/sub broker service that enables sending and receiving messages to and from AWS IoT.
+MQTT is lightweight connectivity protocol for pub/sub message transport. It can be used over the Web Socket Protocol to send messages between a client and server. AWS introduced support for MQTT over WebSockets for AWS IoT in [January 2016](https://aws.amazon.com/about-aws/whats-new/2016/01/aws-iot-now-supports-websockets-custom-keepalive-intervals-and-enhanced-console/)!
 
 The `./index.html` file has an example of of mqtt/websockets/html/js subscription and publishing of topics/messages in chrome console.
 
 ### WebSocket Protocol in a Web Application
 
-We want to enable browser based apps to send and receive data from iOT connected devices.
+We want to enable browser based apps to send and receive data from IoT connected devices.
 
 The process is as follows:
 
@@ -37,7 +50,7 @@ The process is as follows:
   }
   ```
 
-2. Open the WebSocket connect to AWS iOT
+2. Open the WebSocket connect to AWS IoT
 
   Once the web socket connection has been initiated, an MQTT client needs to be created to receive MQTT messages over the Web Socket Protocol.
 
@@ -45,7 +58,7 @@ The process is as follows:
 
   An example of using the Paho client has been included in the `src/js/components/request.js` file in the `initClient` function.
 
-  Based on the AWS IOT [Docs](http://docs.aws.amazon.com/iot/latest/developerguide/protocols.html);
+  Based on the AWS IoT [Docs](http://docs.aws.amazon.com/iot/latest/developerguide/protocols.html);
 
 ## WebSockets with Amazon Cognito to securely authenticate end-users to your apps and devices.  
 
@@ -66,23 +79,14 @@ Run the example by typing `npm run dev:start` in your terminal after cloning thi
 ## READING:
 
 * http://stackoverflow.com/questions/35345481/aws-iot-mqtt-over-websocket-protocol
-=======
-### What is AWS IoT?
-AWS IoT provides two-way communication between devices that are connected to the internet and the AWS Cloud. This means that you can create applications that your users will be able to control from their phones or tablets. _(Very cool stuff!)_
+======
 
-AWS IoT consists of a few components. They are:
+## Contents
 
-* Message broker - a mechanism for things to publish and receive messages from each other. The MQTT protocol can be used to publish and subscribe and the HTTP REST interface can be used to publish.
-
-* Rules engine - allows the integration between IoT and other AWS services.
-* Thing Registry - a.k.a. 'Device Registry'. This organises the resources associated with each _thing_.
-* Thing Shadow service - provides persistent representations of your things in the AWS Cloud. It can hold state information about your _thing_ which can be synchronised when it next connects. Your _things_ can also publish their current state to a thing shadow for other applications or devices to use.
-* Thing shadow - a.k.a. 'Device shadow'. It's a JSON document used to store and retrieve current state information for a _thing_.
-* Device gateway - enables devices to communicate with AwS IoT.
-* Security and identity service - Your _things_ must keep their credentials safe in order to send data securely to the message broker. The message broker and rules engine use AWS Security features to send data to devices or other AWS services.
++ [Create a **_THING_**](#get-started-by-creating-a-thing-with-aws-iot)
 
 
-### Get Started by Creating a **_THING_** with AWS IoT
+## Get Started by Creating a **_THING_** that will Communicate with AWS IoT
 
 To create a thing you'll need to use the AWS CLI. Install it by following the steps **[here](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-set-up.html)**.
 
@@ -172,16 +176,15 @@ You'll then be prompted to enter your Access Key ID, Secret Access Key and your 
 
   ![SSL/TLS](https://cloud.githubusercontent.com/assets/12450298/13012711/4393899c-d1a4-11e5-931c-aaf072f37bc7.png)
 
-  Click 'OK' which will take you back to the MQTT.fx dashboard.
+    Click 'OK' which will take you back to the MQTT.fx dashboard.
 
 6. Click the connect button at the top of the window to connect to AWS IoT:
 
-  ![connect](https://cloud.githubusercontent.com/assets/12450298/13012844/e8fd4c38-d1a4-11e5-8bfd-105445768591.png)
-
+    ![connect](https://cloud.githubusercontent.com/assets/12450298/13012844/e8fd4c38-d1a4-11e5-8bfd-105445768591.png)
 
 7. Subscribe to an MQTT topic by clicking on the subscribe tab, entering a topic name and then clicking subscribe (make sure the QoS 0 option is selected in the dropdown on the right):
 
-  ![subscribe](https://cloud.githubusercontent.com/assets/12450298/13012947/576ee19a-d1a5-11e5-8f98-0ff25a229e31.png)
+    ![subscribe](https://cloud.githubusercontent.com/assets/12450298/13012947/576ee19a-d1a5-11e5-8f98-0ff25a229e31.png)
 
 8. Publish to an MQTT topic by clicking on the publish tab and entering the name of the topic you just subscribed to:
 
